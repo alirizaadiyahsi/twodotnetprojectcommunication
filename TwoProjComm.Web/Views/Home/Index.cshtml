@@ -1,0 +1,101 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<script src="~/signalr/hubs"></script>
+
+<script>
+    $(function () {
+        // c# tarafındaki tüm metodların isimleri
+        // script içerisinde küçük harfle başlamalı
+        var chat = $.connection.chatHub;
+
+        // kullanıcıdan girişte isim alıyoruz.
+        $("#displayname").val(prompt("Kullanıcı adı giriniz: ", ""));
+
+        // eğer farklı isim gerekliyse burada onu alıyoruz.
+        chat.client.differentName = function (name) {
+            $("#dislayname").val(prompt("Lütfen başka bir kullanıcı adı giriniz: ", ""));
+            chat.server.notify($("#dislayname").val(), $.connection.hub.id);
+        };
+
+        // online kullanıcı listesini güncelliyoruz.
+        chat.client.online = function (name) {
+            if (name == $("#displayname").val()) {
+                $("#onlineusers").append('<div> Sen: ' + name + '</div>');
+            } else {
+                $("#onlineusers").append('<div> ' + name + '</div>');
+                $("#users").append('<option value="' + name + '">' + name + '</option>');
+            }
+        };
+
+        // giriş yapan kullanıcılar, online kullanıcılar alanına
+        // ve dropdownliste ekleniyor.
+        chat.client.enters = function (name) {
+            $("#chats").append('<div>' + name + ' chat odasına giriş yaptı...</div>');
+            $("#users").append('<option value="' + name + '">' + name + '</option>');
+            $("#onlineusers").append('<div> ' + name + '</div>');
+        };
+
+        // gelen mesajı tüm istemcilere ilet
+        chat.client.broadcastMessage = function (name, message) {
+            $("#chats").append('<div>' + name + ' : ' + message + '</div>');
+        };
+
+        // kullanıcı baglantıyı kestigi zaman
+        chat.client.disconnected = function (name) {
+            $("#chats").append('<div>' + name + ' chat odasından çıkış yaptı...</div>');
+            $("#onlineusers div").remove(':contains(' + name + ')');
+            $("#users option").remove(':contains(' + name + ')');
+        };
+
+        // hub bağlantısını başlatıyoruz
+        $.connection.hub.start().done(function () {
+
+            // kullanıcı adını yolluyoruz
+            chat.server.notify($("#displayname").val(), $.connection.hub.id);
+
+            $("#sendmessage").click(function () {
+
+                // tüm kullanıcılar mesajı görecekse
+                if ($("#users").val() == "All") {
+                    chat.server.send($("#displayname").val(), $("#message").val());
+                } else { // seçilen kullanıcı görecekse
+                    chat.server.sendToSpecific($("#displayname").val(), $("#message").val(), $("#users").val());
+                }
+
+                // mesajı alanını temizle
+                $("#displayname").val('').focus();
+            });
+        });
+    });
+</script>
+
+<input type="hidden" id="displayname" />
+
+<div class="row">
+    <div id="chats" class="col-xs-9">
+
+    </div>
+    <div id="onlineuserlist" class="col-xs-3">
+        <div>Online Kullanıcılar</div>
+        <div id="onlineusers">
+
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div>
+        <textarea id="message" class="form-control"></textarea>
+    </div>
+    <div>
+        <div class="col-xs-2">
+            <button class="btn btn-primary" id="sendmessage" value="Gönder">Gönder</button>
+        </div>
+        <div class="col-xs-10">
+            <select id="users" class="form-control">
+                <option value="All">All</option>
+            </select>
+        </div>
+    </div>
+</div>
