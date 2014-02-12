@@ -31,6 +31,7 @@ namespace TwoProjComm.Web.Models
         // birine aitse tekrardan isim girmesi için uyarı alacak
         public void Notify(string name, string id)
         {
+            
             // isim zaten varsa tekrar gir
             if (dic.ContainsKey(name))
             {
